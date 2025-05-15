@@ -68,6 +68,7 @@ func NewDerperer(config DerpererConfig) (*Derperer, error) {
 	app.Get("/", derperer.index)
 
 	app.Get("/derp.json", derperer.getDerp)
+	app.Get("/derp_sort.json", derperer.sortDerp)
 
 	if config.AdminToken != "" {
 		adminApi := app.Group("/admin", basicauth.New(basicauth.Config{
@@ -163,6 +164,14 @@ func (d *Derperer) getDerp(c *fiber.Ctx) error {
 		return err
 	}
 	m, err := d.derpMap.FilterDERPMap(filter)
+	if err != nil {
+		return err
+	}
+	return c.JSON(m)
+}
+
+func (d *Derperer) sortDerp(c *fiber.Ctx) error {
+	m, err := d.derpMap.SortDERPMap()
 	if err != nil {
 		return err
 	}

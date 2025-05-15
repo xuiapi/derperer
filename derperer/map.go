@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"sync/atomic"
 	"time"
-
+	"sort"
 	"github.com/yoshino-s/derperer/fofa"
 	"github.com/yoshino-s/derperer/speedtest"
 	"github.com/gofiber/fiber/v2"
@@ -123,6 +123,67 @@ func (d *Map) FilterDERPMap(filter DERPMapFilter) (*DERPMap, error) {
 
 		newMapId++
 	}
+	return newMap, nil
+}
+
+// SortDERPMap 根据带宽从大到小排序
+func (d *Map) SortDERPMap() (*DERPMap, error) {
+	// 创建一个新的DERPMap
+	newMap := NewDERPMap()
+	
+	// 创建一个切片来存储DERPRegion，以便排序
+	regions := make([]*DERPRegion, 0, len(d.Regions))
+	for _, region := range d.Regions {
+		// 只添加有带宽信息的region
+		if region.Bandwidth != "" {
+			regions = append(regions, region.Clone())
+		}
+	}
+	
+	// 按带宽从大到小排序
+	type regionWithBandwidth struct {
+		region    *DERPRegion
+		bandwidth float64
+	}
+	
+	regionsWithBandwidth := make([]regionWithBandwidth, 0, len(regions))
+	for _, r := range regions {
+		if r.Bandwidth != "" {
+			bw, err := speedtest.ParseUnit(r.Bandwidth, "bps")
+			if err != nil {
+				return nil, err
+			}
+			regionsWithBandwidth = append(regionsWithBandwidth, regionWithBandwidth{
+				region:    r,
+				bandwidth: bw.Value,
+			})
+		}
+	}
+	
+	// 排序，带宽从大到小
+	sort.Slice(regionsWithBandwidth, func(i, j int) bool {
+		return regionsWithBandwidth[i].bandwidth > regionsWithBandwidth[j].bandwidth
+	})
+	
+	// 重新分配RegionID并添加到新map
+	newMapId := 900
+	for _, item := range regionsWithBandwidth {
+		r := item.region
+		r.RegionID = newMapId
+		for _, node := range r.Nodes {
+			node.RegionID = newMapId
+		}
+		newMap.Regions[newMapId] = r
+		
+		// 复制RegionScore
+		score := d.DERPMap.HomeParams.RegionScore[item.region.RegionID]
+		if score != 0 {
+			newMap.HomeParams.RegionScore[newMapId] = score
+		}
+		
+		newMapId++
+	}
+	
 	return newMap, nil
 }
 
