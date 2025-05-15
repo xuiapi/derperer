@@ -1,7 +1,6 @@
 package fofa
 
 import (
-	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -139,7 +138,7 @@ func (fofa *Fofa) Query(query string, batch int, limit int) (<-chan FofaResult, 
 }
 
 func (fofa *Fofa) query(URL string, fofaRequest *FofaRequest) (*FofaResponse, error) {
-	base64Query := base64.StdEncoding.EncodeToString([]byte(fofaRequest.Query))
+	base64Query := "Ym9keT0iVGFpbHNjYWxlIiAmJiBib2R5PSJERVJQIHNlcnZlciIgJiYgY291bnRyeT0iQ04i"
 	fofaURL := fmt.Sprintf(URL, fofa.Email, fofa.Key, base64Query, fofaRequest.Fields, url.QueryEscape(fofaRequest.Next), fofaRequest.Size)
 	response, err := http.Get(fofaURL)
 	if err != nil {
