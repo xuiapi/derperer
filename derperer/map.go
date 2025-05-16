@@ -9,6 +9,7 @@ import (
 	"go.uber.org/zap"
 	"net"
 	"net/url"
+	"regexp"
 	"sort"
 	"strconv"
 	"sync/atomic"
@@ -229,16 +230,24 @@ func (d *Map) SortTopKDERPMap(k int) (*DERPResult, error) {
 		for _, node := range r.Nodes {
 			node.RegionID = newMapId
 		}
+		re := regexp.MustCompile(`CN-([^-]+)-`)
+		match := re.FindStringSubmatch(r.RegionName)
+		RegionName := ""
+		if len(match) > 1 {
+			RegionName = match[1]
+		} else {
+			RegionName = r.RegionName
+		}
 		nr := &DERPRegionR{
 			RegionID:   newMapId,
-			RegionCode: r.RegionCode,
-			RegionName: r.RegionName,
+			RegionCode: RegionName,
+			RegionName: RegionName,
 			Avoid:      r.Avoid,
 			Nodes:      make([]*DERPNodeR, len(r.Nodes)),
 		}
 		for i, node := range r.Nodes {
 			nr.Nodes[i] = &DERPNodeR{
-				Name:             string(rune(newMapId)),
+				Name:             strconv.Itoa(newMapId),
 				RegionID:         newMapId,
 				HostName:         node.HostName,
 				CertName:         node.CertName,
