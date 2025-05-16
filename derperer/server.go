@@ -6,15 +6,15 @@ import (
 	"strings"
 	"time"
 
-	_ "github.com/yoshino-s/derperer/docs"
-	"github.com/yoshino-s/derperer/fofa"
-	"github.com/yoshino-s/derperer/persistent"
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/basicauth"
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/gofiber/swagger"
 	"github.com/sourcegraph/conc"
+	_ "github.com/yoshino-s/derperer/docs"
+	"github.com/yoshino-s/derperer/fofa"
+	"github.com/yoshino-s/derperer/persistent"
 	"go.uber.org/zap"
 )
 
@@ -171,7 +171,7 @@ func (d *Derperer) getDerp(c *fiber.Ctx) error {
 }
 
 func (d *Derperer) sortDerp(c *fiber.Ctx) error {
-	m, err := d.derpMap.SortDERPMap()
+	m, err := d.derpMap.SortTopKDERPMap(100)
 	if err != nil {
 		return err
 	}

@@ -78,6 +78,15 @@ const docTemplate = `{
                 "responses": {}
             }
         },
+		"/derp_sort.json": {
+            "get": {
+                "produces": [
+                    "application/json"
+                ],
+                "summary": "Get DERP SORT Map",
+                "responses": {}
+            }
+        },
         "/derp.json": {
             "get": {
                 "produces": [

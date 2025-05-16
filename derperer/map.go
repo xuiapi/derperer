@@ -2,17 +2,17 @@ package derperer
 
 import (
 	"fmt"
+	"github.com/gofiber/fiber/v2"
+	"github.com/sourcegraph/conc/pool"
+	"github.com/yoshino-s/derperer/fofa"
+	"github.com/yoshino-s/derperer/speedtest"
+	"go.uber.org/zap"
 	"net"
 	"net/url"
+	"sort"
 	"strconv"
 	"sync/atomic"
 	"time"
-	"sort"
-	"github.com/yoshino-s/derperer/fofa"
-	"github.com/yoshino-s/derperer/speedtest"
-	"github.com/gofiber/fiber/v2"
-	"github.com/sourcegraph/conc/pool"
-	"go.uber.org/zap"
 )
 
 type DERPMapPolicy struct {
@@ -34,6 +34,48 @@ type Map struct {
 	logger       *zap.Logger
 
 	testPool *pool.Pool
+}
+
+type DERPResult struct {
+	Regions map[int]*DERPRegionR
+}
+
+type DERPRegionR struct {
+	RegionID int
+
+	RegionCode string
+
+	RegionName string
+
+	Avoid bool `json:",omitempty"`
+
+	Nodes []*DERPNodeR
+}
+
+type DERPNodeR struct {
+	Name string
+
+	RegionID int
+
+	HostName string
+
+	CertName string `json:",omitempty"`
+
+	IPv4 string `json:",omitempty"`
+
+	IPv6 string `json:",omitempty"`
+
+	STUNPort int `json:",omitempty"`
+
+	STUNOnly bool `json:",omitempty"`
+
+	DERPPort int `json:",omitempty"`
+
+	InsecureForTests bool `json:",omitempty"`
+
+	STUNTestIP string `json:",omitempty"`
+
+	CanPort80 bool `json:",omitempty"`
 }
 
 func NewMap(policy *DERPMapPolicy) *Map {
@@ -126,11 +168,8 @@ func (d *Map) FilterDERPMap(filter DERPMapFilter) (*DERPMap, error) {
 	return newMap, nil
 }
 
-// SortDERPMap 根据带宽从大到小排序
-func (d *Map) SortDERPMap() (*DERPMap, error) {
-	// 创建一个新的DERPMap
-	newMap := NewDERPMap()
-	
+// SortTopKDERPMap 返回带宽从大到小前K个节点的DERPResult，并删除每个region的Bandwidth、Status和Latency字段
+func (d *Map) SortTopKDERPMap(k int) (*DERPResult, error) {
 	// 创建一个切片来存储DERPRegion，以便排序
 	regions := make([]*DERPRegion, 0, len(d.Regions))
 	for _, region := range d.Regions {
@@ -139,13 +178,13 @@ func (d *Map) SortDERPMap() (*DERPMap, error) {
 			regions = append(regions, region.Clone())
 		}
 	}
-	
+
 	// 按带宽从大到小排序
 	type regionWithBandwidth struct {
 		region    *DERPRegion
 		bandwidth float64
 	}
-	
+
 	regionsWithBandwidth := make([]regionWithBandwidth, 0, len(regions))
 	for _, r := range regions {
 		if r.Bandwidth != "" {
@@ -159,32 +198,67 @@ func (d *Map) SortDERPMap() (*DERPMap, error) {
 			})
 		}
 	}
-	
+
 	// 排序，带宽从大到小
 	sort.Slice(regionsWithBandwidth, func(i, j int) bool {
 		return regionsWithBandwidth[i].bandwidth > regionsWithBandwidth[j].bandwidth
 	})
-	
-	// 重新分配RegionID并添加到新map
+
+	// 限制前K个
+	if k > 0 && k < len(regionsWithBandwidth) {
+		regionsWithBandwidth = regionsWithBandwidth[:k]
+	}
+
+	// 创建结果
+	result := &DERPResult{
+		Regions: make(map[int]*DERPRegionR),
+	}
+
+	// 重新分配RegionID并添加到结果
 	newMapId := 900
 	for _, item := range regionsWithBandwidth {
 		r := item.region
+
+		// 删除指定字段
+		r.Bandwidth = ""
+		r.Status = DERPRegionStatusUnknown // 重置状态
+		r.Latency = ""
+		r.Error = "" // 同时删除错误信息
+
 		r.RegionID = newMapId
 		for _, node := range r.Nodes {
 			node.RegionID = newMapId
 		}
-		newMap.Regions[newMapId] = r
-		
-		// 复制RegionScore
-		score := d.DERPMap.HomeParams.RegionScore[item.region.RegionID]
-		if score != 0 {
-			newMap.HomeParams.RegionScore[newMapId] = score
+		nr := &DERPRegionR{
+			RegionID:   newMapId,
+			RegionCode: r.RegionCode,
+			RegionName: r.RegionName,
+			Avoid:      r.Avoid,
+			Nodes:      make([]*DERPNodeR, len(r.Nodes)),
 		}
-		
+		for i, node := range r.Nodes {
+			nr.Nodes[i] = &DERPNodeR{
+				Name:             string(rune(newMapId)),
+				RegionID:         newMapId,
+				HostName:         node.HostName,
+				CertName:         node.CertName,
+				IPv4:             node.IPv4,
+				IPv6:             node.IPv6,
+				STUNPort:         node.STUNPort,
+				STUNOnly:         node.STUNOnly,
+				DERPPort:         node.DERPPort,
+				InsecureForTests: node.InsecureForTests,
+				STUNTestIP:       node.STUNTestIP,
+				CanPort80:        node.CanPort80,
+			}
+		}
+		// 将节点添加到结果中
+		result.Regions[newMapId] = nr
+
 		newMapId++
 	}
-	
-	return newMap, nil
+
+	return result, nil
 }
 
 func (d *Map) findByHostnameAndPort(hostname string, port ...int) *DERPRegion {
