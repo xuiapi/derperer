@@ -69,6 +69,7 @@ func NewDerperer(config DerpererConfig) (*Derperer, error) {
 
 	app.Get("/derp.json", derperer.getDerp)
 	app.Get("/derp_sort.json", derperer.sortDerp)
+	app.Get("/update.json", derperer.updateTailscale)
 
 	if config.AdminToken != "" {
 		adminApi := app.Group("/admin", basicauth.New(basicauth.Config{
@@ -134,6 +135,22 @@ func (d *Derperer) Start() {
 	})
 
 	wg.Go(func() {
+		for {
+			var lastFetch time.Time
+			if err := d.persistent.Load("last_fetch_tailscale", &lastFetch); err != nil {
+				zap.L().Error("failed to load last_fetch_tailscale", zap.Error(err))
+			}
+
+			<-time.After(d.config.FetchInterval - time.Since(lastFetch))
+			d.autoupdateTailscale()
+
+			if err := d.persistent.Save("last_fetch_tailscale", time.Now()); err != nil {
+				zap.L().Error("failed to save last_fetch_tailscale", zap.Error(err))
+			}
+		}
+	})
+
+	wg.Go(func() {
 		d.app.Listen(d.config.Address)
 	})
 
@@ -171,11 +188,28 @@ func (d *Derperer) getDerp(c *fiber.Ctx) error {
 }
 
 func (d *Derperer) sortDerp(c *fiber.Ctx) error {
-	m, err := d.derpMap.SortTopKDERPMap(100)
+	m, err := d.derpMap.SortTopKDERPMap(20)
 	if err != nil {
 		return err
 	}
 	return c.JSON(m)
+}
+
+func (d *Derperer) updateTailscale(c *fiber.Ctx) error {
+	m, err := d.derpMap.SortTopKDERPMap(20)
+	if err != nil {
+		return err
+	}
+	UpdateACL(m.Regions)
+	return nil
+}
+
+func (d *Derperer) autoupdateTailscale() {
+	m, err := d.derpMap.SortTopKDERPMap(20)
+	if err != nil {
+		return
+	}
+	UpdateACL(m.Regions)
 }
 
 // @securityDefinitions.basic BasicAuth
