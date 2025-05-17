@@ -136,21 +136,21 @@ func (d *Derperer) Start() {
 		}
 	})
 
-	// wg.Go(func() {
-	// 	for {
-	// 		var lastFetch time.Time
-	// 		if err := d.persistent.Load("last_fetch_tailscale", &lastFetch); err != nil {
-	// 			zap.L().Error("failed to load last_fetch_tailscale", zap.Error(err))
-	// 		}
+	wg.Go(func() {
+		for {
+			var lastFetch time.Time
+			if err := d.persistent.Load("last_fetch_tailscale", &lastFetch); err != nil {
+				zap.L().Error("failed to load last_fetch_tailscale", zap.Error(err))
+			}
 
-	// 		<-time.After(d.config.FetchInterval - time.Since(lastFetch))
-	// 		d.autoupdateTailscale()
+			<-time.After(d.config.FetchInterval - time.Since(lastFetch))
+			d.autoupdateTailscale()
 
-	// 		if err := d.persistent.Save("last_fetch_tailscale", time.Now()); err != nil {
-	// 			zap.L().Error("failed to save last_fetch_tailscale", zap.Error(err))
-	// 		}
-	// 	}
-	// })
+			if err := d.persistent.Save("last_fetch_tailscale", time.Now()); err != nil {
+				zap.L().Error("failed to save last_fetch_tailscale", zap.Error(err))
+			}
+		}
+	})
 
 	wg.Go(func() {
 		d.app.Listen(d.config.Address)

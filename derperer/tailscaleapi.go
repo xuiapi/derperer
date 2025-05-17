@@ -64,7 +64,7 @@ func generateACLConfig(regions map[int]*DERPRegionR) Config {
 	return cfg
 }
 
-func UpdateACL(regions map[int]*DERPRegionR, account string, api_key string) []byte {
+func UpdateACL(regions map[int]*DERPRegionR, account string, api_key string) string {
 	url := "https://api.tailscale.com/api/v2/tailnet/" + account + "/acl"
 
 	cfg := generateACLConfig(regions)
@@ -74,8 +74,6 @@ func UpdateACL(regions map[int]*DERPRegionR, account string, api_key string) []b
 	if err != nil {
 		fmt.Println("JSON Marshal 失败: %v", err)
 	}
-
-	fmt.Println(string(out))
 
 	payload := strings.NewReader(string(out))
 
@@ -88,5 +86,5 @@ func UpdateACL(regions map[int]*DERPRegionR, account string, api_key string) []b
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
 
-	return body
+	return string(body)
 }
