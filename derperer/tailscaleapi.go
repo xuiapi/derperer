@@ -64,8 +64,8 @@ func generateACLConfig(regions map[int]*DERPRegionR) Config {
 	return cfg
 }
 
-func UpdateACL(regions map[int]*DERPRegionR) {
-	url := "https://api.tailscale.com/api/v2/tailnet/example.com/acl"
+func UpdateACL(regions map[int]*DERPRegionR, account string, api_key string) string {
+	url := "https://api.tailscale.com/api/v2/tailnet/" + account + "/acl"
 
 	cfg := generateACLConfig(regions)
 
@@ -79,12 +79,12 @@ func UpdateACL(regions map[int]*DERPRegionR) {
 
 	req, _ := http.NewRequest("POST", url, payload)
 
-	req.Header.Add("Authorization", "Bearer api-key")
+	req.Header.Add("Authorization", "Bearer "+api_key)
 
 	res, _ := http.DefaultClient.Do(req)
 
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
 
-	fmt.Println(string(body))
+	return string(body)
 }

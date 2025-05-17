@@ -36,6 +36,8 @@ type DerpererConfig struct {
 	FofaClient    fofa.Fofa
 	DERPMapPolicy DERPMapPolicy
 	DataPath      string
+	Account       string
+	ApiKey        string
 }
 
 func NewDerperer(config DerpererConfig) (*Derperer, error) {
@@ -69,7 +71,7 @@ func NewDerperer(config DerpererConfig) (*Derperer, error) {
 
 	app.Get("/derp.json", derperer.getDerp)
 	app.Get("/derp_sort.json", derperer.sortDerp)
-	app.Get("/update.json", derperer.updateTailscale)
+	app.Get("/update", derperer.updateTailscale)
 
 	if config.AdminToken != "" {
 		adminApi := app.Group("/admin", basicauth.New(basicauth.Config{
@@ -134,21 +136,21 @@ func (d *Derperer) Start() {
 		}
 	})
 
-	wg.Go(func() {
-		for {
-			var lastFetch time.Time
-			if err := d.persistent.Load("last_fetch_tailscale", &lastFetch); err != nil {
-				zap.L().Error("failed to load last_fetch_tailscale", zap.Error(err))
-			}
+	// wg.Go(func() {
+	// 	for {
+	// 		var lastFetch time.Time
+	// 		if err := d.persistent.Load("last_fetch_tailscale", &lastFetch); err != nil {
+	// 			zap.L().Error("failed to load last_fetch_tailscale", zap.Error(err))
+	// 		}
 
-			<-time.After(d.config.FetchInterval - time.Since(lastFetch))
-			d.autoupdateTailscale()
+	// 		<-time.After(d.config.FetchInterval - time.Since(lastFetch))
+	// 		d.autoupdateTailscale()
 
-			if err := d.persistent.Save("last_fetch_tailscale", time.Now()); err != nil {
-				zap.L().Error("failed to save last_fetch_tailscale", zap.Error(err))
-			}
-		}
-	})
+	// 		if err := d.persistent.Save("last_fetch_tailscale", time.Now()); err != nil {
+	// 			zap.L().Error("failed to save last_fetch_tailscale", zap.Error(err))
+	// 		}
+	// 	}
+	// })
 
 	wg.Go(func() {
 		d.app.Listen(d.config.Address)
@@ -200,8 +202,8 @@ func (d *Derperer) updateTailscale(c *fiber.Ctx) error {
 	if err != nil {
 		return err
 	}
-	UpdateACL(m.Regions)
-	return nil
+	t := UpdateACL(m.Regions, d.config.Account, d.config.ApiKey)
+	return c.JSON(t)
 }
 
 func (d *Derperer) autoupdateTailscale() {
@@ -209,7 +211,7 @@ func (d *Derperer) autoupdateTailscale() {
 	if err != nil {
 		return
 	}
-	UpdateACL(m.Regions)
+	UpdateACL(m.Regions, d.config.Account, d.config.ApiKey)
 }
 
 // @securityDefinitions.basic BasicAuth

@@ -246,6 +246,10 @@ func (d *Map) SortTopKDERPMap(k int) (*DERPResult, error) {
 			Nodes:      make([]*DERPNodeR, len(r.Nodes)),
 		}
 		for i, node := range r.Nodes {
+			// 如果Hostname包含"tailscale"，则跳过
+			if regexp.MustCompile(`tailscale`).MatchString(node.HostName) {
+				continue
+			}
 			nr.Nodes[i] = &DERPNodeR{
 				Name:             strconv.Itoa(newMapId),
 				RegionID:         newMapId,
@@ -260,6 +264,10 @@ func (d *Map) SortTopKDERPMap(k int) (*DERPResult, error) {
 				STUNTestIP:       node.STUNTestIP,
 				CanPort80:        node.CanPort80,
 			}
+		}
+		// 如果节点数为0，则跳过
+		if len(nr.Nodes) == 0 {
+			continue
 		}
 		// 将节点添加到结果中
 		result.Regions[newMapId] = nr
