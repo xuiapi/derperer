@@ -29,15 +29,16 @@ type Derperer struct {
 }
 
 type DerpererConfig struct {
-	Address       string
-	AdminToken    string
-	FetchInterval time.Duration
-	FetchBatch    int
-	FofaClient    fofa.Fofa
-	DERPMapPolicy DERPMapPolicy
-	DataPath      string
-	Account       string
-	ApiKey        string
+	Address        string
+	AdminToken     string
+	FetchInterval  time.Duration
+	FetchBatch     int
+	FofaClient     fofa.Fofa
+	DERPMapPolicy  DERPMapPolicy
+	DataPath       string
+	Account        string
+	ApiKey         string
+	UpdateInterval time.Duration
 }
 
 func NewDerperer(config DerpererConfig) (*Derperer, error) {
@@ -143,7 +144,7 @@ func (d *Derperer) Start() {
 				zap.L().Error("failed to load last_fetch_tailscale", zap.Error(err))
 			}
 
-			<-time.After(d.config.FetchInterval - time.Since(lastFetch))
+			<-time.After(d.config.UpdateInterval - time.Since(lastFetch))
 			d.autoupdateTailscale()
 
 			if err := d.persistent.Save("last_fetch_tailscale", time.Now()); err != nil {
@@ -211,7 +212,8 @@ func (d *Derperer) autoupdateTailscale() {
 	if err != nil {
 		return
 	}
-	UpdateACL(m.Regions, d.config.Account, d.config.ApiKey)
+	t := UpdateACL(m.Regions, d.config.Account, d.config.ApiKey)
+	fmt.Println(t)
 }
 
 // @securityDefinitions.basic BasicAuth
