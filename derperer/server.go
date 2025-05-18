@@ -12,9 +12,9 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/gofiber/swagger"
 	"github.com/sourcegraph/conc"
-	_ "github.com/yoshino-s/derperer/docs"
-	"github.com/yoshino-s/derperer/fofa"
-	"github.com/yoshino-s/derperer/persistent"
+	_ "github.com/koyangyang/derperer/docs"
+	"github.com/koyangyang/derperer/fofa"
+	"github.com/koyangyang/derperer/persistent"
 	"go.uber.org/zap"
 )
 

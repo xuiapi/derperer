@@ -1,0 +1,18 @@
+config:
+  # Fofa client configuration
+  FofaClient:
+    Email:  # fofa email
+    Key:    # fofa key
+  AdminToken:           # admin token
+  Address: :8080               # Service listening address (default: ":8080")
+  DataPath: /data               # Data storage path (default: "./data")
+  Account:                     # Tailscale account
+  ApiKey:                      # Tailscale apikey
+  FetchBatch: 100                # Batch fetch count (default: 100)
+  FetchInterval: 6h0m0s          # Fetch interval (default: 24h0m0s)
+  UpdateInterval: 4h0m0s         # Tailscale ACL update interval
+  DERPMapPolicy:
+    BaselineBandwidth: 2         # Bandwidth limit, unit: Mbps (default: 2)
+    CheckDuration: 10s           # Check duration (default: 5s)
+    RecheckInterval: 1h0m0s      # Recheck interval (default: 1h0m0s)
+    TestConcurrency: 1           # Test concurrency (default: 4)

@@ -1,7 +1,7 @@
 package main
 
 import (
-	"github.com/yoshino-s/derperer/cmd"
+	"github.com/koyangyang/derperer/cmd"
 )
 
 func main() {

@@ -9,7 +9,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/yoshino-s/derperer/speedtest"
+	"github.com/koyangyang/derperer/speedtest"
 	"github.com/spf13/cobra"
 	"go.uber.org/zap"
 	"tailscale.com/tailcfg"

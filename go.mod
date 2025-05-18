@@ -1,4 +1,4 @@
-module github.com/yoshino-s/derperer
+module github.com/koyangyang/derperer
 
 go 1.20
 
