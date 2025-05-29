@@ -11,10 +11,10 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/monitor"
 	"github.com/gofiber/fiber/v2/middleware/pprof"
 	"github.com/gofiber/swagger"
-	"github.com/sourcegraph/conc"
 	_ "github.com/koyangyang/derperer/docs"
 	"github.com/koyangyang/derperer/fofa"
 	"github.com/koyangyang/derperer/persistent"
+	"github.com/sourcegraph/conc"
 	"go.uber.org/zap"
 )
 
@@ -39,6 +39,7 @@ type DerpererConfig struct {
 	Account        string
 	ApiKey         string
 	UpdateInterval time.Duration
+	DeleteInterval time.Duration
 }
 
 func NewDerperer(config DerpererConfig) (*Derperer, error) {
@@ -92,6 +93,16 @@ func NewDerperer(config DerpererConfig) (*Derperer, error) {
 	}
 
 	return derperer, nil
+}
+
+func (d *Derperer) RemoveFofaData() {
+	logger := zap.L()
+	logger.Info("removing fofa data")
+	if err := d.persistent.Delete("derp_map"); err != nil {
+		logger.Error("failed to delete derp_map", zap.Error(err))
+	}
+	d.derpMap = NewMap(&d.config.DERPMapPolicy)
+	d.FetchFofaData()
 }
 
 func (d *Derperer) FetchFofaData() {
@@ -149,6 +160,22 @@ func (d *Derperer) Start() {
 
 			if err := d.persistent.Save("last_fetch_tailscale", time.Now()); err != nil {
 				zap.L().Error("failed to save last_fetch_tailscale", zap.Error(err))
+			}
+		}
+	})
+
+	wg.Go(func() {
+		for {
+			var lastFetch time.Time
+			if err := d.persistent.Load("last_delete", &lastFetch); err != nil {
+				zap.L().Error("failed to load last_delete", zap.Error(err))
+			}
+
+			<-time.After(d.config.FetchInterval - time.Since(lastFetch))
+			d.RemoveFofaData()
+
+			if err := d.persistent.Save("last_delete", time.Now()); err != nil {
+				zap.L().Error("failed to save last_delete", zap.Error(err))
 			}
 		}
 	})
