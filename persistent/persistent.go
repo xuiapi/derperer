@@ -54,6 +54,16 @@ func (p *Persistent) Save(filename string, data interface{}) error {
 
 	return nil
 }
+func (p *Persistent) Delete(filename string) error {
+	lock := p.mutex(filename)
+	lock.Lock()
+	defer lock.Unlock()
+
+	if err := os.Remove(p.RootPath + "/" + filename); err != nil {
+		return err
+	}
+	return nil
+}
 
 func (p *Persistent) Load(filename string, data interface{}) error {
 	lock := p.mutex(filename)
